@@ -100,6 +100,12 @@ stage('Results')
 }
 ```
 
+## Scratch Space
+```
+-Dsonar.host.url=http://206.189.241.88:9000 \
+-Dsonar.login=sqp_dfe411bbe58dfba863f942c6b5fcac2f79e7db1a
+```
+
 ## References
 ```
 https://github.com/jenkinsci/kubernetes-plugin/tree/master/examples
@@ -109,3 +115,6 @@ https://stackoverflow.com/questions/67735377/nexus-artifact-upload-plugin-does-n
 https://issues.jenkins.io/browse/JENKINS-38918
 https://github.com/jenkinsci/nexus-artifact-uploader-plugin/pull/23/commits/7f0648dacaf7ff2dd0b4687b706a42071f527770
 ```
+
+## Author
+- Vikram K (www.youtube.com/c/devopsmadeeasy)
