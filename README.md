@@ -1,4 +1,4 @@
-# jenkins-end-to-end-pipeline
+# Jenkins End to End Pipeline
 
 # Steps to install
 
