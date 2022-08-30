@@ -41,6 +41,8 @@ spec:
 ## Plugins to use
 ```
 https://plugins.jenkins.io/pipeline-stage-view/
+https://plugins.jenkins.io/nexus-artifact-uploader/
+https://plugins.jenkins.io/pipeline-utility-steps/
 ```
 
 ## References
