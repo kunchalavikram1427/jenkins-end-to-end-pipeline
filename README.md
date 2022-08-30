@@ -43,6 +43,7 @@ spec:
 https://plugins.jenkins.io/pipeline-stage-view/
 https://plugins.jenkins.io/nexus-artifact-uploader/
 https://plugins.jenkins.io/pipeline-utility-steps/
+https://plugins.jenkins.io/junit/
 ```
 
 ## References
