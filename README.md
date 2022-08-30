@@ -45,7 +45,7 @@ helm upgrade --install sonarqube sonarqube/
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata: 
-  name: maven-repo
+  name: maven-cache
 spec: 
   accessModes:
     - ReadWriteOnce
@@ -72,6 +72,7 @@ https://plugins.jenkins.io/pipeline-stage-view/
 https://plugins.jenkins.io/nexus-artifact-uploader/
 https://plugins.jenkins.io/pipeline-utility-steps/
 https://plugins.jenkins.io/junit/
+https://plugins.jenkins.io/kubernetes-cli/
 ```
 
 ## Fail Pipeline if Nexus Step Fails
