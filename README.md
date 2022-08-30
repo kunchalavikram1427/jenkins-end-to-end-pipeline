@@ -21,6 +21,7 @@ helm repo update
 Install
 ```
 helm pull sonatype/nexus-repository-manager --untar
+helm install nexus nexus-repository-manager/
 ```
 
 ## PVC for Maven Cache
