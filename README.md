@@ -6,10 +6,15 @@
 ```
 helm repo add jenkins https://charts.jenkins.io
 helm repo update
+helm pull jenkins/jenkins --untar
 ```
 Install 
 ```
-helm install jenkins jenkins/jenkins --set controller.servicePort=80 --set controller.serviceType=LoadBalancer
+helm upgrade --install jenkins jenkins/
+```
+or install without making any changes to the chart by
+```
+helm upgrade --install jenkins jenkins/jenkins --set controller.servicePort=80 --set controller.serviceType=LoadBalancer
 ```
 
 ## Install Nexus
@@ -17,11 +22,22 @@ https://artifacthub.io/packages/helm/sonatype/nexus-repository-manager
 ```
 helm repo add sonatype https://sonatype.github.io/helm3-charts/
 helm repo update
+helm pull sonatype/nexus-repository-manager --untar
 ```
 Install
 ```
-helm pull sonatype/nexus-repository-manager --untar
-helm install nexus nexus-repository-manager/
+helm upgrade --install nexus nexus-repository-manager/
+```
+
+## Install SonarQube
+```
+helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
+helm repo update
+helm pull sonarqube/sonarqube --untar
+```
+Install
+```
+helm upgrade --install sonarqube sonarqube/ 
 ```
 
 ## PVC for Maven Cache
