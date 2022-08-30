@@ -13,15 +13,29 @@ helm install jenkins jenkins/jenkins --set controller.servicePort=80 --set contr
 ```
 
 ## Install Nexus
+https://artifacthub.io/packages/helm/sonatype/nexus-repository-manager
 ```
-helm repo add curiedfcharts https://curie-data-factory.github.io/helm-charts
+helm repo add sonatype https://sonatype.github.io/helm3-charts/
 helm repo update
 ```
 Install
 ```
-helm install nexus curiedfcharts/nexus --set service.type=LoadBalancer
+helm pull sonatype/nexus-repository-manager --untar
 ```
 
+## PVC for Maven Cache
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+  name: maven-repo
+spec: 
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
 
 # References
 ```
