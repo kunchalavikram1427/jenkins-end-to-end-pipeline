@@ -54,7 +54,7 @@ spec:
       storage: 1Gi
 ```
 
-## Dockerfile to build the image
+## Dockerfile to build petclinic project docker image
 ```
 FROM openjdk:8-jre-alpine
 EXPOSE 8080
@@ -62,9 +62,49 @@ COPY target/*.war /usr/bin/spring-petclinic.war
 ENTRYPOINT ["java","-jar","/usr/bin/spring-petclinic.war","--server.port=8080"]
 ```
 
+## Dockerfile to build custom image with helm and kubectl cli tools
+Available as: kunchalavikram/kubectl_helm_cli:latest
+```
+FROM alpine/helm
+RUN curl -LO https://dl.k8s.io/release/v1.25.0/bin/linux/amd64/kubectl \
+    && mv kubectl /bin/kubectl \
+    && chmod a+x /bin/kubectl
+ ```
 ## Kubernetes Deployment & Service files
 ```
-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petclinic
+  labels:
+    app: petclinic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: petclinic
+  template:
+    metadata:
+      labels:
+        app: petclinic
+    spec:
+      containers:
+      - name: petclinic
+        image: kunchalavikram/spring-petclinic:latest
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: petclinic
+spec:
+  type: LoadBalancer
+  selector:
+    app: petclinic
+  ports:
+    - port: 80
+      targetPort: 8080
 ```
 ## Plugins to use
 ```
