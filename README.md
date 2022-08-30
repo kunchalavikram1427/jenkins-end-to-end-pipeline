@@ -4,7 +4,8 @@
 
 ## Install Jenkins
 ```
-helm pull jenkins/jenkins --untar
+helm repo add jenkins https://charts.jenkins.io
+helm repo update
 ```
 Install the helm chart
 ```
