@@ -1,7 +1,3 @@
-// https://plugins.jenkins.io/docker-workflow/
-// XGwscKDIs7RrQGYcTJSuMf
-// f8251776-04d2-4eac-8ca2-8f51eb25d961
-
 pipeline {
     agent {
       kubernetes {
