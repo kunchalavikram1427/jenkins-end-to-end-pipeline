@@ -46,9 +46,34 @@ https://plugins.jenkins.io/pipeline-utility-steps/
 https://plugins.jenkins.io/junit/
 ```
 
+## Fail Pipeline if Nexus Step Fails
+By default, any failure in Nexus Upload step will not fail the pipeline. Instead pipeline will be marked as 'SUCCESS'
+Uploading: http://167.99.18.228:8081/repository/maven-hosted2/org/springframework/samples/spring-petclinic/15.99/spring-petclinic-15.99.pom
+Failed to deploy artifacts: Could not find artifact org.springframework.samples:spring-petclinic:war:15.99 in maven-hosted2 (http://167.99.18.228:8081/repository/maven-hosted2)
+Finished: SUCCESS
+
+```
+stage('Results') 
+{
+  steps 
+    {
+      script 
+      {
+        def log_output = currentBuild.rawBuild.getLog(10000);
+        def result = log_output.find { it.contains('Failed to deploy artifacts') }
+        if (result) 
+        {
+          error (result)
+        }
+      }
+    }
+}
+```
+
 ## References
 ```
 https://github.com/jenkinsci/kubernetes-plugin/tree/master/examples
 https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/ssl-and-repository-connector-configuration
 https://support.sonatype.com/hc/en-us/articles/217542177?_ga=2.135356529.1307852621.1661838709-1983751057.1661838709
+https://stackoverflow.com/questions/67735377/nexus-artifact-upload-plugin-does-not-fail-pipeline-if-upload-fails
 ```
