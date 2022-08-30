@@ -49,8 +49,10 @@ https://plugins.jenkins.io/junit/
 ## Fail Pipeline if Nexus Step Fails
 By default, any failure in Nexus Upload step will not fail the pipeline. Instead pipeline will be marked as 'SUCCESS'
 > Uploading: http://167.99.18.228:8081/repository/maven-hosted2/org/springframework/samples/spring-petclinic/15.99/spring-petclinic-15.99.pom
+
 > Failed to deploy artifacts: Could not find artifact org.springframework.samples:spring-petclinic:war:15.99 in maven-hosted2 (http://167.99.18.228:8081/repository/maven-hosted2)
-Finished: SUCCESS
+
+>Finished: SUCCESS
 
 ```
 stage('Results') 
