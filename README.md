@@ -37,7 +37,12 @@ spec:
       storage: 1Gi
 ```
 
-# References
+## Plugins to use
+```
+https://plugins.jenkins.io/pipeline-stage-view/
+```
+
+## References
 ```
 https://github.com/jenkinsci/kubernetes-plugin/tree/master/examples
 ```
