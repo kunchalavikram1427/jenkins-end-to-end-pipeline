@@ -1,7 +1,5 @@
 # Jenkins End to End Pipeline
 
-# Steps to install
-
 ## Install Jenkins
 ```
 helm repo add jenkins https://charts.jenkins.io
@@ -17,6 +15,17 @@ or install without making any changes to the chart by
 helm upgrade --install jenkins jenkins/jenkins --set controller.servicePort=80 --set controller.serviceType=LoadBalancer
 ```
 
+## Install SonarQube
+```
+helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
+helm repo update
+helm pull sonarqube/sonarqube --untar
+```
+Install
+```
+helm upgrade --install sonarqube sonarqube/ 
+```
+
 ## Install Nexus
 https://artifacthub.io/packages/helm/sonatype/nexus-repository-manager
 ```
@@ -27,17 +36,6 @@ helm pull sonatype/nexus-repository-manager --untar
 Install
 ```
 helm upgrade --install nexus nexus-repository-manager/
-```
-
-## Install SonarQube
-```
-helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
-helm repo update
-helm pull sonarqube/sonarqube --untar
-```
-Install
-```
-helm upgrade --install sonarqube sonarqube/ 
 ```
 
 ## PVC for Maven Cache
@@ -54,6 +52,94 @@ spec:
       storage: 1Gi
 ```
 
+## Pipeline Steps Snippets
+
+### Build Options
+```
+options {
+      buildDiscarder logRotator(daysToKeepStr: '2', numToKeepStr: '10')
+      timeout(time: 10, unit: 'MINUTES')
+}
+```
+### Git clone
+```
+git url: 'https://github.com/kunchalavikram1427/spring-petclinic.git',
+branch: 'main'
+```
+### Maven Build
+```
+sh "mvn -Dmaven.test.failure.ignore=true clean package"
+```
+### Build Image
+```
+docker build -t $IMAGE_NAME:$IMAGE_TAG .
+docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
+```
+### Sonar Stage
+```
+withSonarQubeEnv(credentialsId: 'sonar', installationName: 'sonarserver') { 
+    sh '''/opt/sonar-scanner/bin/sonar-scanner \
+      -Dsonar.projectKey=petclinic \
+      -Dsonar.projectName=petclinic \
+      -Dsonar.projectVersion=1.0 \
+      -Dsonar.sources=src/main \
+      -Dsonar.tests=src/test \
+      -Dsonar.java.binaries=target/classes  \
+      -Dsonar.language=java \
+      -Dsonar.sourceEncoding=UTF-8 \
+      -Dsonar.java.libraries=target/classes
+      '''
+}
+```
+### Nexus Stage
+```
+script {
+    pom = readMavenPom file: "pom.xml";
+    filesByGlob = findFiles(glob: "target/*.${pom.packaging}"); 
+    echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
+    artifactPath = filesByGlob[0].path;
+    artifactExists = fileExists artifactPath;
+    if(artifactExists) {
+        echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version}";
+        nexusArtifactUploader(
+            nexusVersion: NEXUS_VERSION,
+            protocol: NEXUS_PROTOCOL,
+            nexusUrl: NEXUS_URL,
+            groupId: pom.groupId,
+            version: pom.version,
+            repository: NEXUS_REPOSITORY,
+            credentialsId: NEXUS_CREDENTIAL_ID,
+            artifacts: [
+                [artifactId: pom.artifactId,
+                classifier: '',
+                file: artifactPath,
+                type: pom.packaging],
+
+                [artifactId: pom.artifactId,
+                classifier: '',
+                file: "pom.xml",
+                type: "pom"]
+            ]
+        );
+
+    } else {
+        error "*** File: ${artifactPath}, could not be found";
+    }
+}
+```
+### Wait for QG
+```
+timeout(time: 1, unit: 'MINUTES') {
+    waitForQualityGate abortPipeline: true
+}
+```
+### Helm Deployment
+```
+withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', serverUrl: '') {
+    sh "helm upgrade --install petclinic petclinic-chart/"
+}
+```
+
 ## Dockerfile to build petclinic project docker image
 ```
 FROM openjdk:8-jre-alpine
@@ -63,7 +149,7 @@ ENTRYPOINT ["java","-jar","/usr/bin/spring-petclinic.war","--server.port=8080"]
 ```
 
 ## Dockerfile to build custom image with helm and kubectl cli tools
-Available as: kunchalavikram/kubectl_helm_cli:latest
+Image available in Dockerhub as: kunchalavikram/kubectl_helm_cli:latest
 ```
 FROM alpine/helm
 RUN curl -LO https://dl.k8s.io/release/v1.25.0/bin/linux/amd64/kubectl \
@@ -106,6 +192,7 @@ spec:
     - port: 80
       targetPort: 8080
 ```
+
 ## Plugins to use
 ```
 https://plugins.jenkins.io/pipeline-stage-view/
@@ -115,33 +202,8 @@ https://plugins.jenkins.io/junit/
 https://plugins.jenkins.io/kubernetes-cli/
 ```
 
-## Fail Pipeline if Nexus Step Fails
-By default, any failure in Nexus Upload step will not fail the pipeline. Instead pipeline will be marked as 'SUCCESS'
-> Uploading: http://167.99.18.228:8081/repository/maven-hosted2/org/springframework/samples/spring-petclinic/15.99/spring-petclinic-15.99.pom
-
-> Failed to deploy artifacts: Could not find artifact org.springframework.samples:spring-petclinic:war:15.99 in maven-hosted2 (http://167.99.18.228:8081/repository/maven-hosted2)
-
->Finished: SUCCESS
-
-```
-stage('Results') 
-{
-  steps 
-    {
-      script 
-      {
-        def log_output = currentBuild.rawBuild.getLog(10000);
-        def result = log_output.find { it.contains('Failed to deploy artifacts') }
-        if (result) 
-        {
-          error (result)
-        }
-      }
-    }
-}
-```
-
-## Scratch Space
+## Extras
+Use these parameters if invoking Sonar Maven Plugin
 ```
 -Dsonar.host.url=http://206.189.241.88:9000 \
 -Dsonar.login=sqp_dfe411bbe58dfba863f942c6b5fcac2f79e7db1a
