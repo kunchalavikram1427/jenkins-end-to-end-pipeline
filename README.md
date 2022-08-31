@@ -6,7 +6,7 @@ helm repo add jenkins https://charts.jenkins.io
 helm repo update
 helm pull jenkins/jenkins --untar
 ```
-Install 
+Run 
 ```
 helm upgrade --install jenkins jenkins/
 ```
@@ -21,7 +21,7 @@ helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
 helm repo update
 helm pull sonarqube/sonarqube --untar
 ```
-Install
+Run
 ```
 helm upgrade --install sonarqube sonarqube/ 
 ```
@@ -33,7 +33,7 @@ helm repo add sonatype https://sonatype.github.io/helm3-charts/
 helm repo update
 helm pull sonatype/nexus-repository-manager --untar
 ```
-Install
+Run
 ```
 helm upgrade --install nexus nexus-repository-manager/
 ```
@@ -68,7 +68,7 @@ branch: 'main'
 ```
 ### Maven Build
 ```
-sh "mvn -Dmaven.test.failure.ignore=true clean package"
+mvn -Dmaven.test.failure.ignore=true clean package
 ```
 ### Build Image
 ```
