@@ -77,7 +77,7 @@ pipeline {
               }
             }
         }
-        stage('Code Build') {
+        stage('Build SW') {
             when {
                 expression { true }
             }
@@ -92,25 +92,41 @@ pipeline {
                 }
             }
         }
-        stage('Build Docker Image'){
+        stage('SonarScan'){
             when {
                 expression { true }
             }
             steps {
-                container('docker') {
-                    sh "docker build -t $IMAGE_NAME:$IMAGE_TAG ."
-                    sh "docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest"
-                    withCredentials([usernamePassword(credentialsId: 'docker', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
-                        sh "docker login -u $USER -p $PASS"
-                        sh "docker push $IMAGE_NAME:$IMAGE_TAG"
-                        sh "docker push $IMAGE_NAME:latest"
+                container('sonarcli') {  // /opt/sonar-scanner/bin/sonar-scanner
+                    withSonarQubeEnv(credentialsId: 'sonar', installationName: 'sonarserver') { //Server Info
+                        sh '''/opt/sonar-scanner/bin/sonar-scanner \
+                          -Dsonar.projectKey=petclinic \
+                          -Dsonar.projectName=petclinic \
+                          -Dsonar.projectVersion=1.0 \
+                          -Dsonar.sources=src/main \
+                          -Dsonar.tests=src/test \
+                          -Dsonar.java.binaries=target/classes  \
+                          -Dsonar.language=java \
+                          -Dsonar.sourceEncoding=UTF-8 \
+                          -Dsonar.java.libraries=target/classes
+                          '''
                     }
-                    sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker rmi ${IMAGE_NAME}:latest"
                 }
             }
         }
-        stage("Publish to nexus") {
+        stage('Wait for Quality Gate'){
+            when {
+                expression { true }
+            }
+            steps {
+                container('sonarcli') {  
+                    timeout(time: 1, unit: 'MINUTES') {
+                       waitForQualityGate abortPipeline: true
+                    }
+                }
+            }
+        }
+        stage("Publish Maven Artifacts to Nexus") {
             when {
                 expression { true }
             }
@@ -152,41 +168,25 @@ pipeline {
                 }
             }
         }
-        stage('SonarScan'){
+        stage('Build Docker Image'){
             when {
                 expression { true }
             }
             steps {
-                container('sonarcli') {  // /opt/sonar-scanner/bin/sonar-scanner
-                    withSonarQubeEnv(credentialsId: 'sonar', installationName: 'sonarserver') { //Server Info
-                        sh '''/opt/sonar-scanner/bin/sonar-scanner \
-                          -Dsonar.projectKey=petclinic \
-                          -Dsonar.projectName=petclinic \
-                          -Dsonar.projectVersion=1.0 \
-                          -Dsonar.sources=src/main \
-                          -Dsonar.tests=src/test \
-                          -Dsonar.java.binaries=target/classes  \
-                          -Dsonar.language=java \
-                          -Dsonar.sourceEncoding=UTF-8 \
-                          -Dsonar.java.libraries=target/classes
-                          '''
+                container('docker') {
+                    sh "docker build -t $IMAGE_NAME:$IMAGE_TAG ."
+                    sh "docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest"
+                    withCredentials([usernamePassword(credentialsId: 'docker', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                        sh "docker login -u $USER -p $PASS"
+                        sh "docker push $IMAGE_NAME:$IMAGE_TAG"
+                        sh "docker push $IMAGE_NAME:latest"
                     }
+                    sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "docker rmi ${IMAGE_NAME}:latest"
                 }
             }
         }
-        stage('Wait for QG'){
-            when {
-                expression { true }
-            }
-            steps {
-                container('sonarcli') {  
-                    timeout(time: 1, unit: 'MINUTES') {
-                       waitForQualityGate abortPipeline: true
-                    }
-                }
-            }
-        }
-        stage('App Deployment'){
+        stage('Application Deployment'){
             when {
                 expression { true }
             }
