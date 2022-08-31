@@ -14,6 +14,11 @@ or install without making any changes to the chart by
 ```
 helm upgrade --install jenkins jenkins/jenkins --set controller.servicePort=80 --set controller.serviceType=LoadBalancer
 ```
+Get password
+```
+kubectl exec -it jenkins-0 -- bash
+cat /run/secrets/additional/chart-admin-password
+```
 
 ## Install SonarQube
 ```
@@ -25,6 +30,7 @@ Run
 ```
 helm upgrade --install sonarqube sonarqube/ 
 ```
+Password: admin
 
 ## Install Nexus
 https://artifacthub.io/packages/helm/sonatype/nexus-repository-manager
@@ -37,8 +43,22 @@ Run
 ```
 helm upgrade --install nexus nexus-repository-manager/
 ```
+Get Password
+```
+kubectl exec -it nexus-nexus-repository-manager-5745766765-5pjcf -- bash
+cat /nexus-data/admin.password
+```
+
+## Install Mailhog
+```
+helm repo add codecentric https://codecentric.github.io/helm-charts
+helm repo update
+helm pull codecentric/mailhog --untar
+helm upgrade --install mail mailhog/
+```
 
 ## PVC for Maven Cache
+https://kubernetes.io/docs/concepts/storage/persistent-volumes/
 ```
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -55,6 +75,7 @@ spec:
 ## Pipeline Steps Snippets
 
 ### Agent Template
+https://plugins.jenkins.io/kubernetes/
 ```
 kubernetes {
     yaml '''
@@ -79,6 +100,7 @@ kubernetes {
 }
 ```
 ### Build Options
+https://www.jenkins.io/doc/book/pipeline/syntax/#options
 ```
 options {
       buildDiscarder logRotator(daysToKeepStr: '2', numToKeepStr: '10')
@@ -100,6 +122,8 @@ docker build -t $IMAGE_NAME:$IMAGE_TAG .
 docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
 ```
 ### Sonar Stage
+https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/
+https://www.jenkins.io/doc/pipeline/steps/sonar/
 ```
 withSonarQubeEnv(credentialsId: 'sonar', installationName: 'sonarserver') { 
     sh '''/opt/sonar-scanner/bin/sonar-scanner \
@@ -114,8 +138,18 @@ withSonarQubeEnv(credentialsId: 'sonar', installationName: 'sonarserver') {
       -Dsonar.java.libraries=target/classes
       '''
 }
+
 ```
+### Wait for QG
+https://www.jenkins.io/doc/pipeline/steps/sonar/
+```
+timeout(time: 1, unit: 'MINUTES') {
+    waitForQualityGate abortPipeline: true
+}
+```
+
 ### Nexus Stage
+https://blog.sonatype.com/workflow-automation-publishing-artifacts-to-nexus-using-jenkins-pipelines
 ```
 script {
     pom = readMavenPom file: "pom.xml";
@@ -151,19 +185,42 @@ script {
     }
 }
 ```
-### Wait for QG
+
+## Nexus Push via cURL
+https://support.sonatype.com/hc/en-us/articles/115006744008-How-can-I-programmatically-upload-files-into-Nexus-3-
 ```
-timeout(time: 1, unit: 'MINUTES') {
-    waitForQualityGate abortPipeline: true
+withCredentials([usernamePassword(credentialsId: 'nexus-creds', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+    sh "curl -v -u $USER:$PASS --upload-file target/${pom.artifactId}-${pom.version}.${pom.packaging} \
+    http://137.184.246.45:8081/repository/maven-hosted/org/springframework/samples/${pom.artifactId}/${pom.version}/${pom.artifactId}-${pom.version}.${pom.packaging}"
 }
 ```
+
 ### Helm Deployment
+https://plugins.jenkins.io/kubernetes-cli/
 ```
 withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', serverUrl: '') {
     sh "helm upgrade --install petclinic petclinic-chart/"
 }
 ```
-
+## Post Build Actions
+https://www.jenkins.io/doc/book/pipeline/syntax/#post
+https://plugins.jenkins.io/mailer/
+```
+post {
+    failure {
+        mail to: 'vikram@gmail.com',
+        from: 'jenkinsadmin@gmail.com',
+        subject: "Jenkins pipeline has failed for job ${env.JOB_NAME}",
+        body: "Check build logs at ${env.BUILD_URL}"
+    }
+    success {
+        mail to: 'vikram@gmail.com',
+        from: 'jenkinsadmin@gmail.com',
+        subject: "Jenkins pipeline for job ${env.JOB_NAME} is completed successfully",
+        body: "Check build logs at ${env.BUILD_URL}"
+    }
+}
+```
 ## Dockerfile to build petclinic project docker image
 ```
 FROM openjdk:8-jre-alpine
@@ -217,6 +274,25 @@ spec:
       targetPort: 8080
 ```
 
+## Creating and using Helm hosted repository in Nexus
+
+Upload Helm chart
+```
+helm package <folder-name>
+curl -u admin:admin123 http://137.184.246.45:8081/repository/helm-hosted/ --upload-file petclinic-chart-0.1.0.tgz -v
+```
+
+Adding Hosted Repo
+```
+helm repo add helm-hosted http://admin:admin123@137.184.246.45:8081/repository/helm-hosted/
+helm repo update
+```
+Fetching Charts from Nexus
+```
+helm repo update
+helm pull helm-hosted/petclinic-chart
+```
+
 ## Plugins to use
 ```
 https://plugins.jenkins.io/pipeline-stage-view/
@@ -224,6 +300,7 @@ https://plugins.jenkins.io/nexus-artifact-uploader/
 https://plugins.jenkins.io/pipeline-utility-steps/
 https://plugins.jenkins.io/junit/
 https://plugins.jenkins.io/kubernetes-cli/
+https://plugins.jenkins.io/sonar/
 ```
 
 ## Extras
@@ -241,6 +318,7 @@ https://support.sonatype.com/hc/en-us/articles/217542177?_ga=2.135356529.1307852
 https://stackoverflow.com/questions/67735377/nexus-artifact-upload-plugin-does-not-fail-pipeline-if-upload-fails
 https://issues.jenkins.io/browse/JENKINS-38918
 https://github.com/jenkinsci/nexus-artifact-uploader-plugin/pull/23/commits/7f0648dacaf7ff2dd0b4687b706a42071f527770
+https://e.printstacktrace.blog/how-to-catch-curl-response-in-jenkins-pipeline/
 ```
 
 ## Author

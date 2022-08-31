@@ -35,6 +35,11 @@ pipeline {
               command:
               - cat
               tty: true
+            - name: curl
+              image: alpine/curl:latest
+              command:
+              - cat
+              tty: true
             - name: helm
               image: kunchalavikram/kubectl_helm_cli:latest
               command:
@@ -61,7 +66,7 @@ pipeline {
         IMAGE_TAG = "${BUILD_NUMBER}"
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "167.99.18.228:8081"
+        NEXUS_URL = "137.184.246.45:8081"
         NEXUS_REPOSITORY = "maven-hosted"
         NEXUS_CREDENTIAL_ID = "nexus-creds"
     }
@@ -94,7 +99,7 @@ pipeline {
         }
         stage('SonarScan'){
             when {
-                expression { true }
+                expression { false }
             }
             steps {
                 container('sonarcli') {  // /opt/sonar-scanner/bin/sonar-scanner
@@ -116,7 +121,7 @@ pipeline {
         }
         stage('Wait for Quality Gate'){
             when {
-                expression { true }
+                expression { false }
             }
             steps {
                 container('sonarcli') {  
@@ -128,7 +133,7 @@ pipeline {
         }
         stage("Publish Maven Artifacts to Nexus") {
             when {
-                expression { true }
+                expression { false }
             }
             steps {
                 container('jnlp') {
@@ -168,9 +173,25 @@ pipeline {
                 }
             }
         }
-        stage('Build Docker Image'){
+        stage('Publish Maven Artifacts to Nexus via cURL'){
             when {
                 expression { true }
+            }
+            steps {
+                container('curl') {
+                    script {
+                        pom = readMavenPom file: "pom.xml"; 
+                        withCredentials([usernamePassword(credentialsId: 'nexus-creds', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                            sh "curl -v -u $USER:$PASS --upload-file target/${pom.artifactId}-${pom.version}.${pom.packaging} \
+                                http://137.184.246.45:8081/repository/maven-hosted/org/springframework/samples/${pom.artifactId}/${pom.version}/${pom.artifactId}-${pom.version}.${pom.packaging}"
+                        }
+                    }
+                }
+            }
+        }
+        stage('Build Docker Image'){
+            when {
+                expression { false }
             }
             steps {
                 container('docker') {
@@ -188,7 +209,7 @@ pipeline {
         }
         stage('Application Deployment'){
             when {
-                expression { true }
+                expression { false }
             }
             steps {
                 container('helm') {  
@@ -197,6 +218,20 @@ pipeline {
                     }
                 }
             }
+        }
+    }
+    post {
+        failure {
+            mail to: 'vikram@gmail.com',
+            from: 'jenkinsadmin@gmail.com',
+            subject: "Jenkins pipeline has failed for job ${env.JOB_NAME}",
+            body: "Check build logs at ${env.BUILD_URL}"
+        }
+        success {
+            mail to: 'vikram@gmail.com',
+            from: 'jenkinsadmin@gmail.com',
+            subject: "Jenkins pipeline for job ${env.JOB_NAME} is completed successfully",
+            body: "Check build logs at ${env.BUILD_URL}"
         }
     } 
 }
