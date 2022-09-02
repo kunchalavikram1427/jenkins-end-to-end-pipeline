@@ -195,6 +195,44 @@ withCredentials([usernamePassword(credentialsId: 'nexus-creds', passwordVariable
 }
 ```
 
+
+## Sending status to Github
+https://docs.github.com/en/rest/commits/statuses#create-a-commit-status
+Install Generic webhook trigger plugin
+ACTION
+$.action
+HEAD
+$.pull_request.head.ref
+BASE
+$.pull_request.base.ref
+SHA_ID
+$.pull_request.head.sha
+Expression
+^opened dev master$
+Text
+$action $head $base
+
+```
+withCredentials([string(credentialsId: 'git_token', variable: 'TOKEN')]) {
+    sh "curl -u kunchalavikram1427:$TOKEN -X POST 'https://api.github.com/repos/kunchalavikram1427/spring-petclinic/statuses/$SHA_ID' -H 'Accept: application/vnd.github.v3+json' -d '{\"state\": \"success\",\"context\": \"Maven Build\", \"description\": \"Jenkins\", \"target_url\": \"$JENKINS_URL/job/$JOB_NAME/$BUILD_NUMBER/console\"}' "
+}
+```
+In function form
+```
+void sendStatus(String stage, String status) {
+    container('curl') {
+        withCredentials([string(credentialsId: 'git_token', variable: 'TOKEN')]) {
+            sh "curl -u kunchalavikram1427:$TOKEN -X POST 'https://api.github.com/repos/kunchalavikram1427/spring-petclinic/statuses/$SHA_ID' -H 'Accept: application/vnd.github.v3+json' -d '{\"state\": \"$status\",\"context\": \"$stage\", \"description\": \"Jenkins\", \"target_url\": \"$JENKINS_URL/job/$JOB_NAME/$BUILD_NUMBER/console\"}' "
+        }
+    }
+}
+```
+Call function
+```
+sendStatus("Push to Nexus","success")
+sendStatus("Deployment","failure")
+```
+
 ### Helm Deployment
 https://plugins.jenkins.io/kubernetes-cli/
 ```
@@ -301,6 +339,7 @@ https://plugins.jenkins.io/pipeline-utility-steps/
 https://plugins.jenkins.io/junit/
 https://plugins.jenkins.io/kubernetes-cli/
 https://plugins.jenkins.io/sonar/
+https://plugins.jenkins.io/generic-webhook-trigger/
 ```
 
 ## Extras

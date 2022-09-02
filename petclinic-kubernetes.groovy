@@ -81,6 +81,11 @@ pipeline {
                   branch: 'main'
               }
             }
+            post {
+                success {
+                    sendStatus("Checkout SCM","success")
+                }
+            }
         }
         stage('Build SW') {
             when {
@@ -94,6 +99,7 @@ pipeline {
             post {
                 success {
                     junit '**/target/surefire-reports/*.xml'
+                    sendStatus("Build SW","success")
                 }
             }
         }
@@ -175,7 +181,7 @@ pipeline {
         }
         stage('Publish Maven Artifacts to Nexus via cURL'){
             when {
-                expression { true }
+                expression { false }
             }
             steps {
                 container('curl') {
@@ -219,6 +225,15 @@ pipeline {
                 }
             }
         }
+        stage('Overall Status') {
+            when {
+                expression { true }
+            }
+            steps {
+                sendStatus("Push to Nexus","success")
+                sendStatus("Deployment","failure")
+            }
+        }
     }
     post {
         failure {
@@ -234,4 +249,12 @@ pipeline {
             body: "Check build logs at ${env.BUILD_URL}"
         }
     } 
+}
+// Function to Update Pipeline Status to Github Pull Requests
+void sendStatus(String stage, String status) {
+    container('curl') {
+        withCredentials([string(credentialsId: 'git_token', variable: 'TOKEN')]) {
+            sh "curl -u kunchalavikram1427:$TOKEN -X POST 'https://api.github.com/repos/kunchalavikram1427/spring-petclinic/statuses/$SHA_ID' -H 'Accept: application/vnd.github.v3+json' -d '{\"state\": \"$status\",\"context\": \"$stage\", \"description\": \"Jenkins\", \"target_url\": \"$JENKINS_URL/job/$JOB_NAME/$BUILD_NUMBER/console\"}' "
+        }
+    }
 }
