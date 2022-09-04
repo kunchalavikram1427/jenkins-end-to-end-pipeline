@@ -1,5 +1,9 @@
 # Jenkins End to End Pipeline
 
+## Youtube Video URL
+```
+https://youtu.be/l9mf8K3vBvQ
+```
 ## Install Jenkins
 ```
 helm repo add jenkins https://charts.jenkins.io
@@ -10,7 +14,7 @@ Run
 ```
 helm upgrade --install jenkins jenkins/
 ```
-or install without making any changes to the chart by
+or install without making any changes to the chart by running
 ```
 helm upgrade --install jenkins jenkins/jenkins --set controller.servicePort=80 --set controller.serviceType=LoadBalancer
 ```
@@ -125,7 +129,7 @@ docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
 https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/
 https://www.jenkins.io/doc/pipeline/steps/sonar/
 ```
-withSonarQubeEnv(credentialsId: 'sonar', installationName: 'sonarserver') { 
+withSonarQubeEnv(credentialsId: 'CREDS', installationName: 'SONARSERVER') { 
     sh '''/opt/sonar-scanner/bin/sonar-scanner \
       -Dsonar.projectKey=petclinic \
       -Dsonar.projectName=petclinic \
@@ -189,9 +193,9 @@ script {
 ## Nexus Push via cURL
 https://support.sonatype.com/hc/en-us/articles/115006744008-How-can-I-programmatically-upload-files-into-Nexus-3-
 ```
-withCredentials([usernamePassword(credentialsId: 'nexus-creds', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+withCredentials([usernamePassword(credentialsId: 'CREDS', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
     sh "curl -v -u $USER:$PASS --upload-file target/${pom.artifactId}-${pom.version}.${pom.packaging} \
-    http://137.184.246.45:8081/repository/maven-hosted/org/springframework/samples/${pom.artifactId}/${pom.version}/${pom.artifactId}-${pom.version}.${pom.packaging}"
+    http://NEXUS-SERVER-URL/repository/maven-hosted/org/springframework/samples/${pom.artifactId}/${pom.version}/${pom.artifactId}-${pom.version}.${pom.packaging}"
 }
 ```
 
@@ -213,7 +217,7 @@ Text
 $action $head $base
 
 ```
-withCredentials([string(credentialsId: 'git_token', variable: 'TOKEN')]) {
+withCredentials([string(credentialsId: 'TOKEN', variable: 'TOKEN')]) {
     sh "curl -u kunchalavikram1427:$TOKEN -X POST 'https://api.github.com/repos/kunchalavikram1427/spring-petclinic/statuses/$SHA_ID' -H 'Accept: application/vnd.github.v3+json' -d '{\"state\": \"success\",\"context\": \"Maven Build\", \"description\": \"Jenkins\", \"target_url\": \"$JENKINS_URL/job/$JOB_NAME/$BUILD_NUMBER/console\"}' "
 }
 ```
@@ -221,7 +225,7 @@ In function form
 ```
 void sendStatus(String stage, String status) {
     container('curl') {
-        withCredentials([string(credentialsId: 'git_token', variable: 'TOKEN')]) {
+        withCredentials([string(credentialsId: 'TOKEN', variable: 'TOKEN')]) {
             sh "curl -u kunchalavikram1427:$TOKEN -X POST 'https://api.github.com/repos/kunchalavikram1427/spring-petclinic/statuses/$SHA_ID' -H 'Accept: application/vnd.github.v3+json' -d '{\"state\": \"$status\",\"context\": \"$stage\", \"description\": \"Jenkins\", \"target_url\": \"$JENKINS_URL/job/$JOB_NAME/$BUILD_NUMBER/console\"}' "
         }
     }
@@ -236,7 +240,7 @@ sendStatus("Deployment","failure")
 ### Helm Deployment
 https://plugins.jenkins.io/kubernetes-cli/
 ```
-withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', serverUrl: '') {
+withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'KUBECONFIG', namespace: '', serverUrl: '') {
     sh "helm upgrade --install petclinic petclinic-chart/"
 }
 ```
@@ -317,12 +321,12 @@ spec:
 Upload Helm chart
 ```
 helm package <folder-name>
-curl -u admin:admin123 http://137.184.246.45:8081/repository/helm-hosted/ --upload-file petclinic-chart-0.1.0.tgz -v
+curl -u admin:admin123 http://NEXUS-URL/repository/HELM-REPO-NAME/ --upload-file petclinic-chart-0.1.0.tgz -v
 ```
 
 Adding Hosted Repo
 ```
-helm repo add helm-hosted http://admin:admin123@137.184.246.45:8081/repository/helm-hosted/
+helm repo add helm-hosted http://admin:admin123@NEXUS-URL/repository/HELM-REPO-NAME/
 helm repo update
 ```
 Fetching Charts from Nexus
@@ -345,7 +349,7 @@ https://plugins.jenkins.io/generic-webhook-trigger/
 ## Extras
 Use these parameters if invoking Sonar Maven Plugin
 ```
--Dsonar.host.url=http://206.189.241.88:9000 \
+-Dsonar.host.url=http://SONAR-URL
 -Dsonar.login=sqp_dfe411bbe58dfba863f942c6b5fcac2f79e7db1a
 ```
 
@@ -354,10 +358,6 @@ Use these parameters if invoking Sonar Maven Plugin
 https://github.com/jenkinsci/kubernetes-plugin/tree/master/examples
 https://help.sonatype.com/repomanager3/nexus-repository-administration/formats/docker-registry/ssl-and-repository-connector-configuration
 https://support.sonatype.com/hc/en-us/articles/217542177?_ga=2.135356529.1307852621.1661838709-1983751057.1661838709
-https://stackoverflow.com/questions/67735377/nexus-artifact-upload-plugin-does-not-fail-pipeline-if-upload-fails
-https://issues.jenkins.io/browse/JENKINS-38918
-https://github.com/jenkinsci/nexus-artifact-uploader-plugin/pull/23/commits/7f0648dacaf7ff2dd0b4687b706a42071f527770
-https://e.printstacktrace.blog/how-to-catch-curl-response-in-jenkins-pipeline/
 ```
 
 ## Author
