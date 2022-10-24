@@ -25,6 +25,7 @@ cat /run/secrets/additional/chart-admin-password
 ```
 
 ## Install SonarQube
+https://artifacthub.io/packages/helm/sonarqube/sonarqube
 ```
 helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
 helm repo update
